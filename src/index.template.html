@@ -80,6 +80,10 @@ kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border
 .modal.show{display:flex}
 .modal .card{max-width:520px;width:100%}
 .menu-toggle{display:none}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted);vertical-align:0}
+.dot.ok{background:var(--ok)}.dot.syncing{background:var(--accent)}.dot.error,.dot.offline{background:var(--bad)}
+.field{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);margin:4px 0 10px}
+.err{color:var(--bad);font-size:13px;min-height:18px}
 @media (max-width:860px){
   .layout{grid-template-columns:1fr;padding:12px 16px}
   aside{position:static;max-height:none;display:none}
@@ -98,6 +102,7 @@ kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border
   <div class="bar" id="bar"></div>
   <div class="hbtns">
     <button class="btn menu-toggle" id="menuBtn">Questions ▾</button>
+    <button class="btn" id="syncBtn">☁ Sign in to sync</button>
     <button class="btn" id="examBtn">Exam mode</button>
     <button class="btn" id="moreBtn">⋯</button>
   </div>
@@ -181,7 +186,7 @@ let exam=null; // {ids, answers:{}, i, end, done}
 let pick=[];   // current selection before submit
 
 const st=id=>P[id]||{};
-function setP(id,patch){P[id]=Object.assign({},P[id],patch,{t:Date.now()});save();}
+function setP(id,patch){P[id]=Object.assign({},P[id],patch,{t:Date.now()});save();markDirty(id);}
 
 // ---------- helpers ----------
 const $=s=>document.querySelector(s);
@@ -441,7 +446,7 @@ $('#moreBtn').onclick=()=>{
   <div class="actions"><button class="btn primary" onclick="exportP()">Export progress</button><button class="btn" onclick="document.getElementById('importFile').click()">Import progress</button></div>
   <div class="actions"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="instantCk" ${UI.instant!==false?'checked':''}> Check single-answer questions as soon as I click an option</label></div>
   <div class="actions">Theme: <button class="btn ${theme==='auto'?'on':''}" onclick="setTheme('auto')">Auto</button><button class="btn ${theme==='light'?'on':''}" onclick="setTheme('light')">Light</button><button class="btn ${theme==='dark'?'on':''}" onclick="setTheme('dark')">Dark</button></div>
-  <div class="actions"><button class="btn" onclick="UI.seed=Date.now()%100000;save();closeModal();refresh(true)">Reshuffle order</button><button class="btn" style="color:var(--bad)" onclick="confirmInline('Erase ALL progress, flags and notes? This cannot be undone.',()=>{P={};save();refresh(true)})">Reset all progress</button></div>
+  <div class="actions"><button class="btn" onclick="UI.seed=Date.now()%100000;save();closeModal();refresh(true)">Reshuffle order</button><button class="btn" style="color:var(--bad)" onclick="confirmInline('Erase ALL progress, flags and notes? This cannot be undone.',()=>{P={};save();cloudReplace();refresh(true)})">Reset all progress</button></div>
   <div class="actions"><span class="sp"></span><button class="btn" onclick="closeModal()">Close</button></div>`);
   $('#instantCk').onchange=e=>{UI.instant=e.target.checked;save();};
 };
@@ -452,7 +457,7 @@ function exportP(){
 }
 $('#importFile').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);P=d.progress||d;save();refresh(true);flash('Progress imported.');}catch(err){flash('Could not read that file.');}};
+  r.onload=()=>{try{const d=JSON.parse(r.result);P=d.progress||d;save();cloudReplace();refresh(true);flash('Progress imported.');}catch(err){flash('Could not read that file.');}};
   r.readAsText(f);e.target.value='';
 };
 
@@ -492,10 +497,112 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Enter'){const s=$('#subB');if(s&&!s.disabled)s.click();else move(1);e.preventDefault();}
 });
 
+
+// ---------- cloud sync (optional sign-in) ----------
+const AUTHKEY='saa-c03-auth-v1', DIRTYKEY='saa-c03-dirty-v1';
+let AUTH=load(AUTHKEY,null);                 // {token, username}
+let dirty=new Set(load(DIRTYKEY,[]));        // question ids changed since last successful upload
+let syncState='', pushT=null, lastErr='';
+function saveAuth(){try{AUTH?localStorage.setItem(AUTHKEY,JSON.stringify(AUTH)):localStorage.removeItem(AUTHKEY)}catch(e){}}
+function saveDirty(){try{localStorage.setItem(DIRTYKEY,JSON.stringify([...dirty]))}catch(e){}}
+async function api(path,body,opts={}){
+  let r;
+  try{r=await fetch('/api/'+path,{method:body?'POST':'GET',keepalive:!!opts.keepalive,
+    headers:{'Content-Type':'application/json',...(AUTH?{Authorization:'Bearer '+AUTH.token}:{})},
+    body:body?JSON.stringify(body):undefined});}
+  catch(e){throw new Error(location.protocol==='file:'?'Sync only works on the deployed site, not the local file.':'You appear to be offline.');}
+  let d={};try{d=await r.json()}catch(e){}
+  if(r.status===401&&AUTH&&path!=='auth'){AUTH=null;saveAuth();renderSync();flash('Your session expired. Sign in again to keep syncing.');}
+  if(!r.ok)throw new Error(d.error||`Server error (${r.status})`);
+  return d;
+}
+function setSync(s,err){syncState=s;lastErr=err||'';renderSync();}
+function renderSync(){
+  const b=$('#syncBtn');
+  if(!AUTH){b.innerHTML='☁ Sign in to sync';b.title='';return;}
+  const label={ok:'Synced',syncing:'Syncing…',error:'Sync error',offline:'Offline'}[syncState]||'';
+  b.innerHTML=`<span class="dot ${syncState}"></span>${esc(AUTH.username)}`;b.title=label+(lastErr?': '+lastErr:'');
+}
+function markDirty(id){dirty.add(id);saveDirty();if(AUTH){clearTimeout(pushT);pushT=setTimeout(push,1500);}}
+async function push(opts){
+  if(!AUTH||!dirty.size)return;
+  const ids=[...dirty],changes={};ids.forEach(id=>{if(P[id])changes[id]=P[id]});
+  setSync('syncing');
+  try{
+    // upload in chunks so a first upload of many questions stays small
+    for(let i=0;i<ids.length;i+=150){const part={};ids.slice(i,i+150).forEach(id=>{if(changes[id])part[id]=changes[id]});await api('progress',{changes:part},opts);}
+    ids.forEach(id=>{if(!P[id]||P[id]===changes[id])dirty.delete(id)});saveDirty();setSync('ok');
+  }catch(e){setSync(navigator.onLine?'error':'offline',e.message);}
+}
+async function pull(){
+  if(!AUTH)return;
+  setSync('syncing');
+  try{
+    const {progress,resetAt}=await api('progress');
+    let changed=false;
+    // progress reset on another device: drop older local entries instead of re-uploading them
+    if(resetAt)for(const id in P)if(!progress[id]&&(P[id].t||0)<resetAt){delete P[id];dirty.delete(id);changed=true;}
+    for(const [id,v] of Object.entries(progress)){
+      const mine=P[id];
+      if(!mine||(v.t||0)>(mine.t||0)){P[id]=v;dirty.delete(id);changed=true;}
+      else if((mine.t||0)>(v.t||0))dirty.add(id);
+    }
+    for(const id in P)if(!progress[id])dirty.add(id);
+    saveDirty();
+    if(changed){save();if(!document.activeElement?.matches?.('textarea,input'))refresh(true);else renderStats();}
+    setSync('ok');await push();
+  }catch(e){setSync(navigator.onLine?'error':'offline',e.message);}
+}
+async function cloudReplace(){
+  if(!AUTH)return;dirty.clear();saveDirty();setSync('syncing');
+  try{await api('progress',{replace:P});setSync('ok');}catch(e){setSync('error',e.message);Object.keys(P).forEach(id=>dirty.add(id));saveDirty();}
+}
+function authModal(){
+  if(AUTH){
+    const n=dirty.size;
+    const msg={ok:'All progress synced',syncing:'Syncing…',error:'Sync problem',offline:'Offline — changes will upload when you reconnect'}[syncState]||'Not synced yet';
+    openModal(`<h3 style="margin-top:0">☁ Signed in as ${esc(AUTH.username)}</h3>
+      <p><span class="dot ${syncState}"></span>${msg}${n?` · ${n} change${n>1?'s':''} waiting to upload`:''}</p>
+      ${lastErr?`<p class="err">${esc(lastErr)}</p>`:''}
+      <p class="count">Sign in with the same username on your phone and laptop. Progress, flags and notes sync automatically.</p>
+      <div class="actions"><button class="btn primary" onclick="closeModal();pull()">Sync now</button><button class="btn" onclick="signOut()">Sign out</button><span class="sp"></span><button class="btn" onclick="closeModal()">Close</button></div>`);
+    return;
+  }
+  openModal(`<h3 style="margin-top:0">☁ Sync across devices</h3>
+    <p class="count">Create an account once, then sign in with it on your phone and laptop. Progress already on this device is kept and uploaded.</p>
+    <form id="authForm" autocomplete="on">
+      <label class="count">Username</label><input class="field" id="authUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      <label class="count">Password (min 6 characters)</label><input class="field" id="authPass" name="password" type="password" autocomplete="current-password" required minlength="6">
+      <div class="err" id="authErr"></div>
+      <div class="actions"><button class="btn primary" type="submit" data-a="login">Sign in</button><button class="btn" type="submit" data-a="signup">Create account</button><span class="sp"></span><button class="btn" type="button" onclick="closeModal()">Cancel</button></div>
+    </form>`);
+  const f=$('#authForm');
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    const action=e.submitter?.dataset.a||'login';
+    const btns=f.querySelectorAll('button');btns.forEach(b=>b.disabled=true);$('#authErr').textContent='';
+    try{
+      const d=await api('auth',{action,username:$('#authUser').value,password:$('#authPass').value});
+      AUTH={token:d.token,username:d.username};saveAuth();closeModal();
+      Object.keys(P).forEach(id=>dirty.add(id));saveDirty();await pull();
+    }catch(err){$('#authErr').textContent=err.message;btns.forEach(b=>b.disabled=false);}
+  };
+  setTimeout(()=>$('#authUser')?.focus(),50);
+}
+async function signOut(){
+  await push();
+  try{await api('auth',{action:'logout'});}catch(e){}
+  AUTH=null;saveAuth();dirty.clear();saveDirty();setSync('');closeModal();
+}
+$('#syncBtn').onclick=authModal;
+document.addEventListener('visibilitychange',()=>{if(!AUTH)return;if(document.visibilityState==='visible')pull();else push({keepalive:true});});
+window.addEventListener('online',()=>AUTH&&pull());
+setInterval(()=>{if(AUTH&&document.visibilityState==='visible')pull();},120000);
+
 // ---------- boot ----------
 if(UI.theme&&UI.theme!=='auto')document.documentElement.dataset.theme=UI.theme;
 try{const ex=JSON.parse(localStorage.getItem('saa-c03-exam'));if(ex&&!ex.done)exam=ex;}catch(e){}
-syncControls();refresh(true);
+syncControls();refresh(true);renderSync();pull();
 </script>
 </body>
 </html>
