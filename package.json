@@ -1,0 +1,8 @@
+{
+  "name": "saa-c03-practice",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -1,0 +1,8 @@
+# Build output (Vercel regenerates it on every deploy)
+public/
+
+# Local / tooling
+node_modules/
+.vercel/
+.DS_Store
+Thumbs.db

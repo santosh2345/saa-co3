@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAA-C03 Practice</title>
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#fff;--text:#1b1f24;--muted:#6a7280;--line:#e2e5ea;
+  --accent:#ff9900;--accent-ink:#1b1f24;--ok:#1f9d55;--ok-bg:#e6f6ec;--bad:#d64545;--bad-bg:#fdeaea;
+  --seen:#3b82f6;--seen-bg:#e7efff;--flag:#b45309;--cell:#eceef2;--sel:#fff4e0;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1318;--panel:#171c23;--text:#e6e9ee;--muted:#8b94a3;--line:#262d37;
+  --ok:#3ecf7a;--ok-bg:#12291c;--bad:#f07171;--bad-bg:#2e1616;--seen:#6aa1ff;--seen-bg:#162238;--flag:#f5a524;--cell:#212833;--sel:#2c2414;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1318;--panel:#171c23;--text:#e6e9ee;--muted:#8b94a3;--line:#262d37;
+  --ok:#3ecf7a;--ok-bg:#12291c;--bad:#f07171;--bad-bg:#2e1616;--seen:#6aa1ff;--seen-bg:#162238;--flag:#f5a524;--cell:#212833;--sel:#2c2414;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;white-space:nowrap}
+header h1 span{color:var(--accent)}
+.stats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stats b{color:var(--text);font-variant-numeric:tabular-nums}
+.bar{flex:1;min-width:140px;height:8px;background:var(--cell);border-radius:6px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.hbtns{display:flex;gap:6px;margin-left:auto}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.on{background:var(--sel);border-color:var(--accent)}
+.layout{display:grid;grid-template-columns:330px 1fr;gap:16px;padding:16px;max-width:1400px;margin:0 auto}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;position:sticky;top:70px;align-self:start;max-height:calc(100vh - 86px);display:flex;flex-direction:column;gap:10px}
+aside label{font-size:12px;color:var(--muted);display:block;margin-bottom:3px}
+aside select,aside input[type=search]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.grid{overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding-right:2px}
+.cell{height:28px;border:0;border-radius:5px;background:var(--cell);font-size:11px;font-variant-numeric:tabular-nums;position:relative;padding:0}
+.cell.ok{background:var(--ok);color:#fff}.cell.bad{background:var(--bad);color:#fff}.cell.seen{background:var(--seen);color:#fff}
+.cell.cur{outline:2px solid var(--accent);outline-offset:1px}
+.cell.fl::after{content:"";position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--flag);box-shadow:0 0 0 1px var(--panel)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.count{font-size:12px;color:var(--muted)}
+main{min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.qhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--muted)}
+.tag{background:var(--cell);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--text)}
+.tag.multi{background:var(--sel);color:var(--flag);font-weight:600}
+.qtext{font-size:16.5px;white-space:pre-wrap;margin:0 0 16px}
+.opt{display:flex;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:11px 14px;margin-bottom:8px;align-items:flex-start}
+.opt:hover:not(:disabled){border-color:var(--muted)}
+.opt:disabled{cursor:default}
+.opt .k{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-weight:600;font-size:13px}
+.opt.picked{border-color:var(--accent);background:var(--sel)}
+.opt.picked .k{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}.opt.right .k{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}.opt.wrong .k{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt .body{flex:1}
+.exp{font-size:13.5px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}
+.opt.right .exp,.opt.wrong .exp{color:var(--text)}
+.verdict{border-radius:10px;padding:10px 14px;margin:12px 0;font-weight:600}
+.verdict.ok{background:var(--ok-bg);color:var(--ok)}.verdict.bad{background:var(--bad-bg);color:var(--bad)}.verdict.seen{background:var(--seen-bg);color:var(--seen)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.actions .sp{flex:1}
+.refs{font-size:13px;margin-top:14px}.refs a{color:var(--seen);word-break:break-all}
+textarea{width:100%;min-height:60px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px;margin-top:10px;resize:vertical}
+.hint{font-size:12px;color:var(--muted);margin-top:12px}
+kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border:1px solid var(--line)}
+.review .card{margin-bottom:14px}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;color:var(--flag)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.show{display:flex}
+.modal .card{max-width:520px;width:100%}
+.menu-toggle{display:none}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;padding:12px 16px}
+  aside{position:static;max-height:none;display:none}
+  aside.open{display:flex}
+  aside .grid{max-height:260px}
+  .menu-toggle{display:inline-block}
+  .card{padding:16px}
+  .hbtns{margin-left:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>SAA-C03</span> Practice</h1>
+  <div class="stats" id="stats"></div>
+  <div class="bar" id="bar"></div>
+  <div class="hbtns">
+    <button class="btn menu-toggle" id="menuBtn">Questions ▾</button>
+    <button class="btn" id="examBtn">Exam mode</button>
+    <button class="btn" id="moreBtn">⋯</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="side">
+    <div class="row">
+      <div><label>Show</label>
+        <select id="fStatus">
+          <option value="all">All questions</option>
+          <option value="new">Not done yet</option>
+          <option value="bad">Got wrong</option>
+          <option value="fl">Flagged</option>
+          <option value="ok">Got right</option>
+          <option value="seen">Only viewed</option>
+          <option value="notes">Have notes</option>
+        </select></div>
+      <div><label>Topic</label><select id="fCat"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Type</label>
+        <select id="fType"><option value="all">All types</option><option value="mcq">Single answer</option><option value="msq">Multi answer</option></select></div>
+      <div><label>Order</label>
+        <select id="fOrder"><option value="seq">In order</option><option value="shuf">Shuffled</option></select></div>
+    </div>
+    <div><label>Search (question, options, service)</label><input type="search" id="fSearch" placeholder="e.g. Kinesis, S3 Glacier, NAT"></div>
+    <div class="row">
+      <button class="btn" id="viewBtn">Read-all view</button>
+      <button class="btn" id="studyBtn" title="Reveal answers without attempting">Study mode: off</button>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="legend">
+      <span><i style="background:var(--cell)"></i>Not done</span>
+      <span><i style="background:var(--ok)"></i>Right</span>
+      <span><i style="background:var(--bad)"></i>Wrong</span>
+      <span><i style="background:var(--seen)"></i>Viewed</span>
+      <span><i style="background:var(--flag);border-radius:50%"></i>Flagged</span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
+<input type="file" id="importFile" accept=".json" hidden>
+
+<script id="qdata" type="application/json">__DATA__</script>
+<script>
+const Q = JSON.parse(document.getElementById('qdata').textContent);
+Q.forEach((q,i)=>{q.n=i+1;q.topic=topicOf(q);q.hay=(q.text+' '+Object.values(q.options).join(' ')+' '+q.category+' '+q.sub_category).toLowerCase();});
+const byId = Object.fromEntries(Q.map(q=>[q.id,q]));
+
+function topicOf(q){
+  const c=(q.category+' '+q.sub_category).toLowerCase(), cat=q.category.toLowerCase();
+  const rules=[
+    ['Cost optimization',/cost|pricing|saving|billing/],
+    ['Security & identity',/secur|iam|identity|encrypt|kms|compliance|governance|protection|access|waf|shield|secret/],
+    ['Networking & content delivery',/network|vpc|content delivery|cloudfront|route 53|dns|direct connect|vpn/],
+    ['Databases',/database|rds|aurora|dynamo|redshift|elasticache|cache/],
+    ['Resilience & DR',/high availab|reliab|disaster|resilien|backup|fault|failover/],
+    ['Integration & messaging',/integration|decoupl|messag|sqs|sns|event|queue/],
+    ['Migration & transfer',/migrat|transfer|datasync|snow/],
+    ['Analytics & data processing',/analytic|data processing|kinesis|glue|athena|stream|etl/],
+    ['Storage',/storage|s3|efs|ebs|fsx|glacier|file/],
+    ['Compute & containers',/compute|ec2|container|serverless|lambda|ecs|eks|scaling|fargate|hpc/],
+    ['Monitoring & management',/manage|monitor|cloudwatch|logging|operation|automation|deploy/],
+  ];
+  for(const [name,re] of rules) if(re.test(cat)) return name;
+  for(const [name,re] of rules) if(re.test(c)) return name;
+  return 'General / other';
+}
+
+// ---------- state ----------
+const KEY='saa-c03-progress-v1', UIKEY='saa-c03-ui-v1';
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(P));localStorage.setItem(UIKEY,JSON.stringify(UI))}catch(e){}}
+let P = load(KEY,{});          // id -> {st:'ok'|'bad'|'seen', sel:[], tries, fl, note, t}
+let UI = load(UIKEY,{status:'all',cat:'all',type:'all',order:'seq',search:'',cur:null,study:false,view:'one',seed:Date.now()%100000});
+let exam=null; // {ids, answers:{}, i, end, done}
+let pick=[];   // current selection before submit
+
+const st=id=>P[id]||{};
+function setP(id,patch){P[id]=Object.assign({},P[id],patch,{t:Date.now()});save();}
+
+// ---------- helpers ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function md(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+?)\*/g,'$1<em>$2</em>').replace(/\n/g,'<br>')}
+function rng(seed){return()=>{seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296}}
+function shuffled(arr,seed){const a=arr.slice(),r=rng(seed);for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const sameSet=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+
+// ---------- filtering ----------
+function list(){
+  const s=UI.search.trim().toLowerCase();
+  let L=Q.filter(q=>{
+    const p=st(q.id);
+    if(UI.cat!=='all'&&q.topic!==UI.cat)return false;
+    if(UI.type!=='all'&&q.question_type!==UI.type)return false;
+    if(s&&!q.hay.includes(s))return false;
+    switch(UI.status){
+      case 'new':return !p.st; case 'bad':return p.st==='bad'; case 'ok':return p.st==='ok';
+      case 'seen':return p.st==='seen'; case 'fl':return !!p.fl; case 'notes':return !!(p.note&&p.note.trim());
+    }
+    return true;
+  });
+  if(UI.order==='shuf')L=shuffled(L,UI.seed);
+  return L;
+}
+let L=[];
+
+// ---------- render: header stats ----------
+function renderStats(){
+  let ok=0,bad=0,seen=0,fl=0;
+  for(const q of Q){const p=st(q.id);if(p.st==='ok')ok++;else if(p.st==='bad')bad++;else if(p.st==='seen')seen++;if(p.fl)fl++;}
+  const done=ok+bad+seen, att=ok+bad, acc=att?Math.round(ok/att*100):0;
+  $('#stats').innerHTML=`<span>Covered <b>${done}</b>/${Q.length}</span><span>Right <b style="color:var(--ok)">${ok}</b></span><span>Wrong <b style="color:var(--bad)">${bad}</b></span><span>Viewed <b style="color:var(--seen)">${seen}</b></span><span>Flagged <b style="color:var(--flag)">${fl}</b></span><span>Accuracy <b>${acc}%</b></span>`+(exam&&!exam.done?`<span>⏱ <b class="timer" id="timer"></b></span>`:'');
+  const w=n=>(n/Q.length*100)+'%';
+  $('#bar').innerHTML=`<i style="width:${w(ok)};background:var(--ok)"></i><i style="width:${w(bad)};background:var(--bad)"></i><i style="width:${w(seen)};background:var(--seen)"></i>`;
+  tick();
+}
+
+// ---------- render: grid ----------
+function cellClass(q,cur){
+  const p=st(q.id);let c='cell';
+  if(exam&&!exam.done){ if(exam.answers[q.id]?.length)c+=' seen'; }
+  else if(p.st)c+=' '+p.st;
+  if(p.fl)c+=' fl'; if(q.id===cur)c+=' cur'; return c;
+}
+function renderGrid(){
+  const cur=currentId();
+  const items=exam?exam.ids.map(id=>byId[id]):L;
+  $('#grid').innerHTML=items.map((q,i)=>`<button class="${cellClass(q,cur)}" data-id="${q.id}" title="Q${q.n} · ${esc(q.topic)}">${exam?i+1:q.n}</button>`).join('');
+  $('#count').textContent=exam?`Exam: ${exam.ids.length} questions`:`${L.length} question${L.length===1?'':'s'} in this list`;
+  const c=$('#grid .cur'); if(c)c.scrollIntoView({block:'nearest'});
+}
+$('#grid').onclick=e=>{const b=e.target.closest('.cell');if(!b)return;
+  if(exam){exam.i=exam.ids.indexOf(b.dataset.id);}else{UI.cur=b.dataset.id;save();}
+  if(UI.view==='review'&&!exam){document.getElementById('r-'+b.dataset.id)?.scrollIntoView({behavior:'smooth',block:'start'});renderGrid();return;}
+  go();};
+
+function currentId(){
+  if(exam)return exam.ids[exam.i];
+  if(!L.length)return null;
+  if(!L.some(q=>q.id===UI.cur))UI.cur=L[0].id;
+  return UI.cur;
+}
+
+// ---------- render: question ----------
+function renderQ(){
+  const id=currentId(), main=$('#main');
+  if(!id){main.innerHTML=`<div class="card empty">No questions match this filter. ${UI.status==='new'?'🎉 You have covered every question in this list!':''}</div>`;return;}
+  const q=byId[id], p=st(id), multi=q.question_type==='msq';
+  const idx=exam?exam.i:L.findIndex(x=>x.id===id), total=exam?exam.ids.length:L.length;
+  const inExam=exam&&!exam.done;
+  let revealed, chosen;
+  if(exam){chosen=exam.answers[id]||[];revealed=exam.done;}
+  else if(p.st&&retrying!==id){revealed=true;chosen=p.sel||[];}
+  else if(UI.study&&retrying!==id){setP(id,{st:'seen',sel:[]});revealed=true;chosen=[];setTimeout(renderStats);}
+  else{if(pick._id!==id){pick=[];pick._id=id;}revealed=false;chosen=pick;}
+
+  const keys=Object.keys(q.options);
+  const opts=keys.map((k,i)=>{
+    let cls='opt';
+    const isC=q.correct_answer.includes(k), isP=chosen.includes(k);
+    if(revealed){if(isC)cls+=' right';else if(isP)cls+=' wrong';}
+    else if(isP)cls+=' picked';
+    const exp=revealed&&q.explanations[k]?`<div class="exp">${isC?'✅ ':isP?'❌ ':''}${md(q.explanations[k])}</div>`:'';
+    return `<button class="${cls}" data-k="${k}" ${revealed?'disabled':''}><span class="k">${k}</span><span class="body">${md(q.options[k])}${exp}</span></button>`;
+  }).join('');
+
+  let verdict='';
+  if(revealed){
+    if(!chosen.length)verdict=`<div class="verdict seen">Answer: ${q.correct_answer.join(', ')}</div>`;
+    else if(sameSet(chosen,q.correct_answer))verdict=`<div class="verdict ok">✓ Correct — ${q.correct_answer.join(', ')}</div>`;
+    else verdict=`<div class="verdict bad">✗ Incorrect — you chose ${chosen.join(', ')}, answer is ${q.correct_answer.join(', ')}</div>`;
+  }
+  const hist=!exam&&p.tries?` · attempted ${p.tries}×`:'';
+  const refs=revealed&&q.references?.length?`<div class="refs"><b>References</b><br>${q.references.map(r=>`<a href="${esc(r)}" target="_blank" rel="noopener">${esc(r)}</a>`).join('<br>')}</div>`:'';
+  const need=multi?q.selection_limit:1;
+
+  main.innerHTML=`<div class="card">
+    <div class="qhead"><b style="color:var(--text)">${exam?`Exam Q${idx+1}/${total}`:`Question ${q.n}`}</b>
+      ${exam?'':`<span>${idx+1} of ${total} in list</span>`}
+      <span class="tag">${esc(q.topic)}</span><span class="tag">${esc(q.sub_category||q.category)}</span>
+      ${multi?`<span class="tag multi">Choose ${need}</span>`:''}<span>${hist}</span></div>
+    <p class="qtext">${esc(q.text)}</p>
+    <div id="opts">${opts}</div>
+    ${verdict}
+    <div class="actions">
+      <button class="btn" id="prevB">← Prev</button>
+      ${!revealed&&!inExam?`<button class="btn primary" id="subB" ${chosen.length===need?'':'disabled'}>Check answer</button><button class="btn" id="revB">Show answer</button>`:''}
+      ${revealed&&!exam?`<button class="btn" id="retryB">Try again</button>`:''}
+      <button class="btn ${p.fl?'on':''}" id="flB">${p.fl?'★ Flagged':'☆ Flag'}</button>
+      <span class="sp"></span>
+      ${!exam?`<button class="btn" id="nextNewB" title="Jump to next question you haven't done">Next not-done ⇥</button>`:''}
+      ${inExam&&idx===total-1?`<button class="btn primary" id="finB">Finish exam</button>`:''}
+      <button class="btn ${revealed||inExam?'primary':''}" id="nextB">Next →</button>
+    </div>
+    ${refs}
+    ${!exam?`<textarea id="note" placeholder="Your notes for this question (saved automatically)">${esc(p.note||'')}</textarea>`:''}
+    <div class="hint"><kbd>A</kbd>–<kbd>E</kbd> choose · <kbd>Enter</kbd> check / next · <kbd>←</kbd><kbd>→</kbd> move · <kbd>F</kbd> flag · <kbd>S</kbd> show answer · <kbd>N</kbd> next not-done</div>
+  </div>`;
+
+  $('#opts').onclick=e=>{const b=e.target.closest('.opt');if(b&&!b.disabled)choose(b.dataset.k);};
+  $('#prevB').onclick=()=>move(-1); $('#nextB').onclick=()=>move(1);
+  $('#flB').onclick=toggleFlag;
+  $('#subB')&&($('#subB').onclick=submit);
+  $('#revB')&&($('#revB').onclick=reveal);
+  $('#retryB')&&($('#retryB').onclick=()=>{pick=[];pick._id=id;retrying=id;renderQ();});
+  $('#nextNewB')&&($('#nextNewB').onclick=nextNew);
+  $('#finB')&&($('#finB').onclick=finishExam);
+  const n=$('#note'); if(n)n.oninput=()=>{setP(id,{note:n.value});};
+  n&&(n.onblur=()=>{renderStats();});
+}
+
+let retrying=null;
+const renderQ2=renderQ;
+
+function choose(k){
+  const id=currentId(), q=byId[id], need=q.question_type==='msq'?q.selection_limit:1;
+  if(exam&&!exam.done){
+    let a=exam.answers[id]||[];
+    if(need===1)a=[k];else a=a.includes(k)?a.filter(x=>x!==k):(a.length<need?[...a,k]:a);
+    exam.answers[id]=a;saveExam();renderQ();renderGrid();return;
+  }
+  if(pick._id!==id){pick=[];pick._id=id;}
+  if(need===1)pick.splice(0,pick.length,k);
+  else if(pick.includes(k))pick.splice(pick.indexOf(k),1);
+  else if(pick.length<need)pick.push(k);
+  else{pick.shift();pick.push(k);}
+  if(need===1&&UI.instant!==false){submit();return;}
+  renderQ2();
+}
+function submit(){
+  const id=currentId(),q=byId[id],need=q.question_type==='msq'?q.selection_limit:1;
+  if(pick._id!==id||pick.length!==need)return;
+  const ok=sameSet(pick,q.correct_answer), p=P[id]||{};
+  setP(id,{st:ok?'ok':'bad',sel:pick.slice(),tries:(p.tries||0)+1});
+  retrying=null;pick=[];pick._id=id;
+  refresh(false);
+}
+function reveal(){
+  const id=currentId(),p=P[id]||{};
+  if(!p.st)setP(id,{st:'seen',sel:[]});
+  retrying=null;refresh(false);
+}
+function toggleFlag(){const id=currentId();setP(id,{fl:!st(id).fl});refresh(false);}
+function move(d){
+  if(exam){exam.i=Math.max(0,Math.min(exam.ids.length-1,exam.i+d));saveExam();go();return;}
+  const i=L.findIndex(q=>q.id===UI.cur), j=i+d;
+  if(j<0||j>=L.length)return;
+  UI.cur=L[j].id;save();go();
+}
+function nextNew(){
+  if(exam)return;
+  const i=L.findIndex(q=>q.id===UI.cur);
+  for(let k=1;k<=L.length;k++){const q=L[(i+k)%L.length];if(!st(q.id).st){UI.cur=q.id;save();go();return;}}
+  const q=Q.find(q=>!st(q.id).st);
+  if(q){ if(confirmInline('Everything in this list is done. Jump to the next not-done question overall (filters reset)?',()=>{Object.assign(UI,{status:'all',cat:'all',type:'all',search:''});syncControls();L=list();UI.cur=q.id;save();go();}))return;}
+  else flash('🎉 You have covered all 905 questions!');
+}
+function go(){retrying=null;pick=[];renderQ();renderStats();renderGrid();window.scrollTo({top:0});}
+
+// ---------- read-all view ----------
+function renderReview(){
+  const main=$('#main');
+  if(!L.length){main.innerHTML='<div class="card empty">No questions match this filter.</div>';return;}
+  const cap=Math.min(L.length,UI.reviewCap||60);
+  main.innerHTML=`<div class="review">${L.slice(0,cap).map(q=>{
+    const p=st(q.id);
+    const opts=Object.keys(q.options).map(k=>{const c=q.correct_answer.includes(k);
+      return `<div class="opt ${c?'right':''}" style="cursor:default"><span class="k">${k}</span><span class="body">${md(q.options[k])}<div class="exp">${md(q.explanations[k]||'')}</div></span></div>`}).join('');
+    return `<div class="card" id="r-${q.id}"><div class="qhead"><b style="color:var(--text)">Question ${q.n}</b><span class="tag">${esc(q.topic)}</span><span class="tag">${esc(q.sub_category||q.category)}</span>${q.question_type==='msq'?`<span class="tag multi">Choose ${q.selection_limit}</span>`:''}
+      <span class="sp" style="flex:1"></span>
+      <button class="btn rv-fl ${p.fl?'on':''}" data-id="${q.id}">${p.fl?'★ Flagged':'☆ Flag'}</button>
+      <button class="btn rv-seen ${p.st?'on':''}" data-id="${q.id}">${p.st?'✓ Read':'Mark read'}</button></div>
+      <p class="qtext">${esc(q.text)}</p>${opts}</div>`}).join('')}
+    ${cap<L.length?`<div class="actions"><button class="btn primary" id="moreR" style="margin:auto">Show more (${L.length-cap} left)</button></div>`:''}</div>`;
+  main.onclick=e=>{
+    const f=e.target.closest('.rv-fl'),s=e.target.closest('.rv-seen');
+    if(f){setP(f.dataset.id,{fl:!st(f.dataset.id).fl});f.classList.toggle('on');f.textContent=st(f.dataset.id).fl?'★ Flagged':'☆ Flag';renderStats();renderGrid();}
+    if(s){const p=st(s.dataset.id);if(!p.st)setP(s.dataset.id,{st:'seen',sel:[]});s.classList.add('on');s.textContent='✓ Read';renderStats();renderGrid();}
+    if(e.target.id==='moreR'){UI.reviewCap=(UI.reviewCap||60)+60;save();renderReview();}
+  };
+}
+
+// ---------- exam mode ----------
+function saveExam(){try{localStorage.setItem('saa-c03-exam',JSON.stringify(exam))}catch(e){}}
+function startExam(){
+  const notDone=shuffled(Q.filter(q=>!st(q.id).st).map(q=>q.id),Date.now()%99991);
+  const rest=shuffled(Q.filter(q=>st(q.id).st).map(q=>q.id),Date.now()%77777);
+  const ids=[...notDone,...rest].slice(0,65);
+  exam={ids,answers:{},i:0,end:Date.now()+130*60000,done:false};
+  saveExam();closeModal();UI.view='one';applyView();refresh(true);
+}
+function finishExam(){
+  if(!exam||exam.done)return;
+  exam.done=true;let ok=0;
+  for(const id of exam.ids){
+    const q=byId[id],a=exam.answers[id]||[],good=sameSet(a,q.correct_answer),p=P[id]||{};
+    if(good)ok++;
+    if(a.length)setP(id,{st:good?'ok':'bad',sel:a,tries:(p.tries||0)+1});
+  }
+  exam.score=ok;saveExam();
+  const pct=Math.round(ok/exam.ids.length*100), scaled=Math.round(100+pct/100*900);
+  openModal(`<h2 style="margin-top:0">Exam finished</h2>
+    <p style="font-size:28px;margin:6px 0"><b>${ok}/${exam.ids.length}</b> · ${pct}%</p>
+    <p>Approx. scaled score <b>${scaled}</b> / 1000 — pass mark is <b>720</b>. ${scaled>=720?'<span style="color:var(--ok)">✓ Pass</span>':'<span style="color:var(--bad)">Keep going</span>'}</p>
+    <p class="count">Results were added to your overall progress. You can now step through each exam question to see explanations (red cells = wrong).</p>
+    <div class="actions"><button class="btn primary" onclick="closeModal();exam.i=0;go()">Review exam answers</button><button class="btn" onclick="exitExam()">Exit exam</button></div>`);
+  refresh(true);
+}
+function exitExam(){exam=null;try{localStorage.removeItem('saa-c03-exam')}catch(e){}closeModal();refresh(true);$('#examBtn').textContent='Exam mode';}
+let tickT=null;
+function tick(){
+  clearTimeout(tickT);
+  if(!exam||exam.done)return;
+  const ms=exam.end-Date.now(),el=document.getElementById('timer');
+  if(ms<=0){finishExam();return;}
+  if(el){const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);el.textContent=`${m}:${String(s).padStart(2,'0')}`;}
+  tickT=setTimeout(tick,1000);
+}
+$('#examBtn').onclick=()=>{
+  if(exam){ if(exam.done)exitExam(); else openModal(`<h3 style="margin-top:0">Exam in progress</h3><p>Answered ${Object.values(exam.answers).filter(a=>a.length).length}/${exam.ids.length}.</p><div class="actions"><button class="btn primary" onclick="closeModal();finishExam()">Finish & score now</button><button class="btn" onclick="exitExam()">Abandon exam</button><button class="btn" onclick="closeModal()">Continue</button></div>`); return;}
+  const left=Q.filter(q=>!st(q.id).st).length;
+  openModal(`<h3 style="margin-top:0">Exam simulation</h3><p>65 questions · 130 minutes · no answers shown until you finish, like the real SAA-C03.</p><p class="count">Questions you haven't done yet are picked first (${left} not done), so exams also help you cover new questions.</p><div class="actions"><button class="btn primary" onclick="startExam()">Start exam</button><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+};
+
+// ---------- modal / more ----------
+function openModal(h){$('#modalBody').innerHTML=h;$('#modal').classList.add('show');}
+function closeModal(){$('#modal').classList.remove('show');}
+$('#modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
+function flash(msg){openModal(`<p style="margin-top:0">${msg}</p><div class="actions"><button class="btn primary" onclick="closeModal()">OK</button></div>`);}
+function confirmInline(msg,fn){window._cf=fn;openModal(`<p style="margin-top:0">${msg}</p><div class="actions"><button class="btn primary" onclick="closeModal();_cf()">Yes</button><button class="btn" onclick="closeModal()">No</button></div>`);return true;}
+$('#moreBtn').onclick=()=>{
+  const theme=document.documentElement.dataset.theme||'auto';
+  openModal(`<h3 style="margin-top:0">Progress & settings</h3>
+  <p class="count">Progress is saved in this browser automatically. Export a backup file to keep it safe or move it to another device.</p>
+  <div class="actions"><button class="btn primary" onclick="exportP()">Export progress</button><button class="btn" onclick="document.getElementById('importFile').click()">Import progress</button></div>
+  <div class="actions"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="instantCk" ${UI.instant!==false?'checked':''}> Check single-answer questions as soon as I click an option</label></div>
+  <div class="actions">Theme: <button class="btn ${theme==='auto'?'on':''}" onclick="setTheme('auto')">Auto</button><button class="btn ${theme==='light'?'on':''}" onclick="setTheme('light')">Light</button><button class="btn ${theme==='dark'?'on':''}" onclick="setTheme('dark')">Dark</button></div>
+  <div class="actions"><button class="btn" onclick="UI.seed=Date.now()%100000;save();closeModal();refresh(true)">Reshuffle order</button><button class="btn" style="color:var(--bad)" onclick="confirmInline('Erase ALL progress, flags and notes? This cannot be undone.',()=>{P={};save();refresh(true)})">Reset all progress</button></div>
+  <div class="actions"><span class="sp"></span><button class="btn" onclick="closeModal()">Close</button></div>`);
+  $('#instantCk').onchange=e=>{UI.instant=e.target.checked;save();};
+};
+function setTheme(t){if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;UI.theme=t;save();closeModal();}
+function exportP(){
+  const blob=new Blob([JSON.stringify({v:1,exported:new Date().toISOString(),progress:P},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`saa-c03-progress-${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+$('#importFile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);P=d.progress||d;save();refresh(true);flash('Progress imported.');}catch(err){flash('Could not read that file.');}};
+  r.readAsText(f);e.target.value='';
+};
+
+// ---------- controls ----------
+function syncControls(){$('#fStatus').value=UI.status;$('#fCat').value=UI.cat;$('#fType').value=UI.type;$('#fOrder').value=UI.order;$('#fSearch').value=UI.search;
+  $('#studyBtn').textContent='Study mode: '+(UI.study?'on':'off');$('#studyBtn').classList.toggle('on',!!UI.study);
+  $('#viewBtn').textContent=UI.view==='review'?'One-at-a-time view':'Read-all view';}
+const topics=[...new Set(Q.map(q=>q.topic))].sort();
+$('#fCat').innerHTML='<option value="all">All topics</option>'+topics.map(t=>`<option>${esc(t)} (${Q.filter(q=>q.topic===t).length})</option>`.replace('<option>',`<option value="${esc(t)}">`)).join('');
+for(const [sel,key] of [['#fStatus','status'],['#fCat','cat'],['#fType','type'],['#fOrder','order']])
+  $(sel).onchange=e=>{UI[key]=e.target.value;UI.reviewCap=60;save();refresh(true);};
+let sT;$('#fSearch').oninput=e=>{clearTimeout(sT);sT=setTimeout(()=>{UI.search=e.target.value;UI.reviewCap=60;save();refresh(true);},200);};
+$('#studyBtn').onclick=()=>{UI.study=!UI.study;save();syncControls();refresh(false);};
+$('#viewBtn').onclick=()=>{if(exam&&!exam.done)return flash('Finish the exam first.');UI.view=UI.view==='review'?'one':'review';UI.reviewCap=60;save();applyView();refresh(true);};
+$('#menuBtn').onclick=()=>$('#side').classList.toggle('open');
+function applyView(){syncControls();}
+
+function refresh(relist){
+  if(relist)L=list();
+  renderStats();
+  if(UI.view==='review'&&!exam){renderReview();}else{$('#main').onclick=null;renderQ2();}
+  renderGrid();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.target.matches?.('input,textarea,select')||e.ctrlKey||e.metaKey||e.altKey)return;
+  if($('#modal').classList.contains('show')){if(e.key==='Escape')closeModal();return;}
+  if(UI.view==='review'&&!exam)return;
+  const k=e.key.toUpperCase(), id=currentId(); if(!id)return;
+  const q=byId[id];
+  if(q.options[k]&&k.length===1){const b=document.querySelector(`.opt[data-k="${k}"]`);if(b&&!b.disabled){choose(k);e.preventDefault();}return;}
+  if(e.key==='ArrowRight'){move(1);e.preventDefault();}
+  else if(e.key==='ArrowLeft'){move(-1);e.preventDefault();}
+  else if(k==='F')toggleFlag();
+  else if(k==='S')$('#revB')?.click();
+  else if(k==='N')nextNew();
+  else if(e.key==='Enter'){const s=$('#subB');if(s&&!s.disabled)s.click();else move(1);e.preventDefault();}
+});
+
+// ---------- boot ----------
+if(UI.theme&&UI.theme!=='auto')document.documentElement.dataset.theme=UI.theme;
+try{const ex=JSON.parse(localStorage.getItem('saa-c03-exam'));if(ex&&!ex.done)exam=ex;}catch(e){}
+syncControls();refresh(true);
+</script>
+</body>
+</html>
