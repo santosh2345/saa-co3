@@ -80,6 +80,14 @@ kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border
 .modal.show{display:flex}
 .modal .card{max-width:520px;width:100%}
 .menu-toggle{display:none}
+.gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 16px}
+.gate.show{display:flex}
+.gate .card{max-width:760px;width:100%;margin:auto}
+.gate .lock{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px}
+.gate h2{margin:0 0 4px;font-size:20px}
+.gate .sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.gate .card.shake{animation:shake .4s}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted);vertical-align:0}
 .dot.ok{background:var(--ok)}.dot.syncing{background:var(--accent)}.dot.error,.dot.offline{background:var(--bad)}
 .field{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);margin:4px 0 10px}
@@ -147,6 +155,7 @@ kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border
   <main id="main"></main>
 </div>
 
+<div class="gate" id="gate"><div class="card" id="gateCard"></div></div>
 <div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
 <input type="file" id="importFile" accept=".json" hidden>
 
@@ -485,6 +494,12 @@ function refresh(relist){
 document.addEventListener('keydown',e=>{
   if(e.target.matches?.('input,textarea,select')||e.ctrlKey||e.metaKey||e.altKey)return;
   if($('#modal').classList.contains('show')){if(e.key==='Escape')closeModal();return;}
+  if($('#gate').classList.contains('show')){
+    const k=e.key.toUpperCase();
+    if(/^[A-F]$/.test(k)&&gateQ.options[k]){const b=$('#gopts [data-k="'+k+'"]');b&&!b.disabled&&b.click();}
+    else if(e.key==='Enter'){const b=$('#gsub')||$('#genter')||$('#gnext');b&&!b.disabled&&b.click();}
+    return;
+  }
   if(UI.view==='review'&&!exam)return;
   const k=e.key.toUpperCase(), id=currentId(); if(!id)return;
   const q=byId[id];
@@ -600,9 +615,59 @@ window.addEventListener('online',()=>AUTH&&pull());
 setInterval(()=>{if(AUTH&&document.visibilityState==='visible')pull();},120000);
 
 // ---------- boot ----------
+// ---------- entry gate: solve one unseen question to enter ----------
+const GATEKEY='saa-c03-gate-ok';
+let gateQ=null, gatePick=[];
+function gateDone(){try{return sessionStorage.getItem(GATEKEY)==='1'}catch(e){return false}}
+function gatePickQ(){
+  const fresh=Q.filter(q=>!P[q.id]||!P[q.id].st);              // never opened/answered
+  const pool=(fresh.length?fresh:Q).filter(q=>q!==gateQ);      // fall back to all if everything is done
+  return pool[Math.floor(Math.random()*pool.length)]||Q[0];
+}
+function renderGate(revealed){
+  const q=gateQ, multi=q.question_type==='msq', need=multi?q.selection_limit:1;
+  const ok=revealed&&sameSet(gatePick,q.correct_answer);
+  const opts=Object.keys(q.options).map(k=>{
+    let cls='opt';const isC=q.correct_answer.includes(k),isP=gatePick.includes(k);
+    if(revealed){if(isC)cls+=' right';else if(isP)cls+=' wrong';}else if(isP)cls+=' picked';
+    const exp=revealed&&q.explanations[k]?`<div class="exp">${isC?'✅ ':isP?'❌ ':''}${md(q.explanations[k])}</div>`:'';
+    return `<button class="${cls}" data-k="${k}" ${revealed?'disabled':''}><span class="k">${k}</span><span class="body">${md(q.options[k])}${exp}</span></button>`;
+  }).join('');
+  const left=Q.filter(x=>!P[x.id]||!P[x.id].st).length;
+  $('#gateCard').innerHTML=`<div class="lock">🔒 Site locked</div>
+    <h2>Solve one question to enter</h2>
+    <p class="sub">No free rides. Get this right and you're in. ${left} questions you haven't touched yet.</p>
+    <div class="qhead"><b style="color:var(--text)">Question ${q.n}</b><span class="tag">${esc(q.topic)}</span>${multi?`<span class="tag multi">Choose ${need}</span>`:''}</div>
+    <p class="qtext">${esc(q.text)}</p>
+    <div id="gopts">${opts}</div>
+    ${revealed?(ok?`<div class="verdict ok">✓ Correct — welcome in.</div>`:`<div class="verdict bad">✗ Nope — answer is ${q.correct_answer.join(', ')}. Read the explanation, then try a fresh one.</div>`):''}
+    <div class="actions">
+      ${!revealed?`<button class="btn primary" id="gsub" ${gatePick.length===need?'':'disabled'}>Check answer</button>`:''}
+      ${revealed&&ok?`<button class="btn primary" id="genter">Enter the site →</button>`:''}
+      ${revealed&&!ok?`<button class="btn primary" id="gnext">Another question →</button>`:''}
+    </div>`;
+  $('#gopts').onclick=e=>{const b=e.target.closest('.opt');if(!b||b.disabled)return;const k=b.dataset.k;
+    if(need===1)gatePick=[k];else if(gatePick.includes(k))gatePick=gatePick.filter(x=>x!==k);else if(gatePick.length<need)gatePick.push(k);else{gatePick.shift();gatePick.push(k);}
+    if(need===1)gateSubmit();else renderGate(false);};
+  $('#gsub')&&($('#gsub').onclick=gateSubmit);
+  $('#gnext')&&($('#gnext').onclick=()=>{gateQ=gatePickQ();gatePick=[];renderGate(false);$('#gate').scrollTop=0;});
+  $('#genter')&&($('#genter').onclick=gateUnlock);
+}
+function gateSubmit(){
+  const q=gateQ, need=q.question_type==='msq'?q.selection_limit:1;
+  if(gatePick.length!==need)return;
+  const ok=sameSet(gatePick,q.correct_answer), p=P[q.id]||{};
+  setP(q.id,{st:ok?'ok':'bad',sel:gatePick.slice(),tries:(p.tries||0)+1});   // counts toward progress
+  renderGate(true);
+  if(!ok){const c=$('#gateCard');c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');}
+}
+function gateUnlock(){try{sessionStorage.setItem(GATEKEY,'1')}catch(e){}$('#gate').classList.remove('show');UI.cur=gateQ.id;save();refresh(true);}
+function openGate(){gateQ=gatePickQ();gatePick=[];renderGate(false);$('#gate').classList.add('show');}
+
 if(UI.theme&&UI.theme!=='auto')document.documentElement.dataset.theme=UI.theme;
 try{const ex=JSON.parse(localStorage.getItem('saa-c03-exam'));if(ex&&!ex.done)exam=ex;}catch(e){}
 syncControls();refresh(true);renderSync();pull();
+if(!gateDone())openGate();
 </script>
 </body>
 </html>
