@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SAA-C03 Practice</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☁️</text></svg>">
 <style>
 :root{
   --bg:#f5f6f8;--panel:#fff;--text:#1b1f24;--muted:#6a7280;--line:#e2e5ea;
@@ -105,12 +106,15 @@ kbd{background:var(--cell);border-radius:4px;padding:0 5px;font-size:11px;border
 @keyframes cheerUp{0%{opacity:0;transform:translate(0,0) scale(.4) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.1) rotate(var(--r))}}
 .toast{position:fixed;left:50%;bottom:24px;z-index:60;transform:translate(-50%,20px);opacity:0;background:var(--panel);border:1px solid var(--ok);color:var(--text);border-radius:999px;padding:8px 16px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.15);transition:opacity .25s,transform .25s;pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
-@media (prefers-reduced-motion:reduce){.cheer{display:none}.toast{transition:none}}
+.buddy{background:none;border:0;padding:0 2px;font-size:18px;line-height:1;display:inline-block;animation:bob 3s ease-in-out infinite}
+.buddy:active{transform:scale(1.3)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.cheer{display:none}.toast{transition:none}.buddy{animation:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1><span>SAA-C03</span> Practice</h1>
+  <h1><span>SAA-C03</span> Practice <button class="buddy" id="buddy" title="Need a pep talk?" aria-label="Pep talk">☁️</button></h1>
   <div class="stats" id="stats"></div>
   <div class="bar" id="bar"></div>
   <div class="hbtns">
@@ -355,6 +359,8 @@ function choose(k){
 const CHEERS=['Nice one! ☁️',"You're on cloud nine! ☁️",'Highly available brain 🧠','Well-architected! 🏗️','Auto-scaling those skills 📈','Zero downtime genius ✨','S3-level durable memory 🪣'];
 const STREAKS={3:'3 in a row — warming up! 🔥',5:'5 streak — multi-AZ mind! 🌍',10:'10 streak — certified legend! 🏆',25:'25 streak — Jeff would be proud 🚀'};
 let streak=0,toastT;
+const PEP=["You've got this! 💪",'One question at a time ☁️','Coffee break? ☕ Then back to it!','Future Solutions Architect right here 🎓','Mistakes = free lessons 📚','Hi friend! 👋','Stay hydrated, stay available 💧'];
+$('#buddy').onclick=()=>{const t=$('#toast');t.textContent=PEP[Math.floor(Math.random()*PEP.length)];t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);};
 function celebrate(ok){
   if(!ok){streak=0;return;}
   streak++;
