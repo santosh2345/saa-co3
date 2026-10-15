@@ -360,7 +360,9 @@ const CHEERS=['Nice one! ☁️',"You're on cloud nine! ☁️",'Highly availabl
 const STREAKS={3:'3 in a row — warming up! 🔥',5:'5 streak — multi-AZ mind! 🌍',10:'10 streak — certified legend! 🏆',25:'25 streak — Jeff would be proud 🚀'};
 let streak=0,toastT;
 const PEP=["You've got this! 💪",'One question at a time ☁️','Coffee break? ☕ Then back to it!','Future Solutions Architect right here 🎓','Mistakes = free lessons 📚','Hi friend! 👋','Stay hydrated, stay available 💧'];
-$('#buddy').onclick=()=>{const t=$('#toast');t.textContent=PEP[Math.floor(Math.random()*PEP.length)];t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);};
+const hr=new Date().getHours(),MOOD=hr<5||hr>=22?['🌙',"It's late — sleep helps memory stick 😴"]:hr<12?['🌤️','Good morning, early riser! 🌅']:hr<18?['☁️','Good afternoon! Keep cruising ✈️']:['🌆','Evening study session — cozy! 🍵'];
+$('#buddy').textContent=MOOD[0];let pepN=0;
+$('#buddy').onclick=()=>{const t=$('#toast');t.textContent=pepN++?PEP[Math.floor(Math.random()*PEP.length)]:MOOD[1];t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);};
 function celebrate(ok){
   if(!ok){streak=0;return;}
   streak++;
